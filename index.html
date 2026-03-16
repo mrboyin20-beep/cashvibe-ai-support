@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>CashVibe AI Assistant</title>
+
+<style>
+body{
+font-family:Arial;
+background:#0f172a;
+color:white;
+text-align:center;
+margin-top:100px;
+}
+
+button{
+padding:15px 25px;
+font-size:18px;
+border-radius:12px;
+border:none;
+background:#22c55e;
+cursor:pointer;
+}
+
+#box{
+margin-top:30px;
+font-size:18px;
+}
+</style>
+
+</head>
+
+<body>
+
+<h1>CashVibe AI Support 🤖</h1>
+<p>Mic dabao aur AI se baat karo</p>
+
+<button onclick="start()">🎤 Talk</button>
+
+<div id="box">
+<p id="user"></p>
+<p id="ai"></p>
+</div>
+
+<script>
+
+const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+recognition.lang="en-IN";
+
+function start(){
+recognition.start();
+}
+
+recognition.onresult = async function(event){
+
+let text = event.results[0][0].transcript;
+
+document.getElementById("user").innerHTML="You: "+text;
+
+let reply = await askAI(text);
+
+document.getElementById("ai").innerHTML="AI: "+reply;
+
+let speech = new SpeechSynthesisUtterance(reply);
+speech.lang="en-IN";
+
+speechSynthesis.speak(speech);
+
+}
+
+async function askAI(question){
+
+let response = await fetch(
+"https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium",
+{
+method:"POST",
+
+headers:{
+"Content-Type":"application/json",
+"Authorization":"Bearer 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"
+},
+
+body:JSON.stringify({
+inputs:question
+})
+}
+);
+
+let data = await response.json();
+
+if(data.generated_text){
+return data.generated_text;
+}
+
+return "CashVibe ek earning platform hai jahan tasks, spin aur referral se coins earn kiye ja sakte hain.";
+
+}
+
+</script>
+
+</body>
+</html>
