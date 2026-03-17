@@ -2,115 +2,180 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CashVibe User Form</title>
+<title>Shout to Fly - Voice Game</title>
 <style>
   body {
-    font-family: 'Poppins', sans-serif;
-    background: linear-gradient(120deg, #f6d365, #fda085);
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
+    background: linear-gradient(to top, #fbc2eb, #a6c1ee);
+    font-family: 'Comic Sans MS', cursive, sans-serif;
+    overflow: hidden;
+    margin: 0;
   }
 
-  .form-container {
-    background: white;
-    padding: 40px;
+  #gameArea {
+    width: 300px;
+    height: 500px;
+    background: #ffffffcc;
+    border: 3px solid #333;
     border-radius: 20px;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
-    width: 350px;
-    animation: slideIn 1s ease forwards;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 20px #ff69b4;
   }
 
-  @keyframes slideIn {
-    0% { opacity: 0; transform: translateY(-50px); }
-    100% { opacity: 1; transform: translateY(0); }
-  }
-
-  h2 {
-    text-align: center;
-    margin-bottom: 30px;
-    color: #ff6f61;
-  }
-
-  input {
-    width: 100%;
-    padding: 12px 15px;
-    margin: 10px 0;
-    border: 2px solid #f0f0f0;
+  #ropeLeft, #ropeRight {
+    width: 15px;
+    height: 100%;
+    background: #8b4513;
+    position: absolute;
+    top: 0;
     border-radius: 10px;
-    transition: all 0.3s ease;
-    outline: none;
+    box-shadow: inset 0 0 5px #00000050;
   }
 
-  input:focus {
-    border-color: #ff6f61;
-    box-shadow: 0 0 10px rgba(255,111,97,0.5);
+  #ropeLeft { left: 50px; }
+  #ropeRight { right: 50px; }
+
+  #ball {
+    width: 35px;
+    height: 35px;
+    background: #ff4500;
+    border-radius: 50%;
+    position: absolute;
+    left: 132px;
+    bottom: 50px;
+    box-shadow: 0 0 15px #ff6347;
+    transition: transform 0.1s;
   }
 
-  button {
-    width: 100%;
-    padding: 12px;
-    border: none;
-    border-radius: 10px;
-    background: linear-gradient(45deg, #ff6f61, #ffb347);
-    color: white;
-    font-size: 16px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
-
-  button:hover {
-    transform: scale(1.05);
-    box-shadow: 0 10px 20px rgba(255,111,97,0.5);
-  }
-
-  .id-box {
-    margin-top: 20px;
-    text-align: center;
+  #score {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    font-size: 22px;
     font-weight: bold;
-    color: #ff6f61;
+    color: #333;
+    text-shadow: 1px 1px 2px #fff;
+  }
+
+  #gameOver {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 32px;
+    color: #ff0000;
     display: none;
+    text-shadow: 2px 2px 5px #000;
+    animation: blink 1s infinite;
+  }
+
+  @keyframes blink {
+    0%, 50%, 100% { opacity: 1; }
+    25%, 75% { opacity: 0; }
   }
 </style>
 </head>
 <body>
-
-<div class="form-container">
-  <h2>CashVibe SignUp</h2>
-  <input type="text" id="name" placeholder="Your Name">
-  <input type="text" id="whatsapp" placeholder="WhatsApp Number">
-  <input type="text" id="details" placeholder="Basic Details">
-  <button onclick="generateID()">Submit</button>
-  <div class="id-box" id="idBox"></div>
+<div id="gameArea">
+  <div id="ropeLeft"></div>
+  <div id="ropeRight"></div>
+  <div id="ball"></div>
+  <div id="score">Score: 0</div>
+  <div id="gameOver">Game Over!</div>
 </div>
 
 <script>
-  function generateID() {
-    const name = document.getElementById('name').value.trim();
-    const whatsapp = document.getElementById('whatsapp').value.trim();
-    const details = document.getElementById('details').value.trim();
+const ball = document.getElementById('ball');
+const scoreEl = document.getElementById('score');
+const gameOverEl = document.getElementById('gameOver');
 
-    if(!name || !whatsapp || !details) {
-      alert('Please fill all fields!');
-      return;
+let ballBottom = 50;
+let velocity = 0;
+let gravity = -0.5;
+let score = 0;
+let gameRunning = true;
+
+// Game over sound
+let gameOverSound = new Audio('gameover.mp3'); // <-- Place gameover.mp3 in same folder
+
+// Voice recognition setup
+if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    alert("Browser does not support voice recognition. Use Chrome or Edge.");
+} else {
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.continuous = true;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+        console.log("🎤 Mic activated! Shout to fly!");
+    };
+
+    recognition.onerror = (event) => {
+        console.log("Error: ", event.error);
+        if(event.error === 'not-allowed') alert("Please allow microphone access!");
+    };
+
+    recognition.onresult = (event) => {
+        const transcript = event.results[event.results.length-1][0].transcript.trim();
+        if(transcript.length > 0 && gameRunning){
+            velocity = 8; // loud voice moves ball up
+            ball.style.transform = 'scale(1.2)'; // fun animation
+            setTimeout(()=>{ ball.style.transform = 'scale(1)'; }, 100);
+        }
+    };
+
+    // Start recognition on first user click (required by some browsers)
+    document.body.addEventListener('click', () => {
+        recognition.start();
+        alert("Mic is now active! Shout to move the ball!");
+    }, { once: true });
+}
+
+function gameLoop(){
+    if(!gameRunning) return;
+
+    // Gravity & movement
+    velocity += gravity;
+    ballBottom += velocity;
+
+    // Ball touches ground → Game Over
+    if(ballBottom <= 0){
+        ballBottom = 0;
+        gameOver();
     }
 
-    // Unique ID generation
-    const uniqueID = 'CV' + Math.floor(Math.random() * 1000000);
-    const idBox = document.getElementById('idBox');
-    idBox.style.display = 'block';
-    idBox.textContent = `Your ID: ${uniqueID}`;
+    // Max height
+    if(ballBottom >= 465){
+        ballBottom = 465;
+        velocity = 0;
+    }
 
-    // Optional: Clear fields after submit
-    document.getElementById('name').value = '';
-    document.getElementById('whatsapp').value = '';
-    document.getElementById('details').value = '';
+    ball.style.bottom = ballBottom + 'px';
 
-    // Aap WhatsApp ya backend me bhejne ka code yahan add karenge
-  }
+    // Score: ball passes between ropes
+    if(ballBottom > 50 && ballBottom < 465){
+        if(!ball.passed){
+            score++;
+            scoreEl.innerText = "Score: " + score;
+            ball.passed = true;
+            setTimeout(()=>{ ball.passed = false; }, 500);
+        }
+    }
+
+    requestAnimationFrame(gameLoop);
+}
+
+function gameOver(){
+    gameRunning = false;
+    gameOverEl.style.display = 'block';
+    gameOverSound.play();
+}
+
+gameLoop();
 </script>
-
 </body>
 </html>
