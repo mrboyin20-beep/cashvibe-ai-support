@@ -35,8 +35,8 @@ cursor:pointer;
 }
 
 .end{background:red;}
-
 </style>
+
 </head>
 
 <body>
@@ -64,24 +64,34 @@ const questions=[
 "Kya aap owner se baat karna chahte hain?"
 ];
 
-function startCall(){
+// 🔥 START CALL WITH MIC FIX
+async function startCall(){
 
 calling=true;
 step=0;
 
+updateStatus("Requesting mic...");
+
+// FORCE mic permission
+try{
+await navigator.mediaDevices.getUserMedia({ audio:true });
+}catch(e){
+alert("Mic allow karo warna call nahi chalega");
+return;
+}
+
 speak("Hello! CashVibe support me aapka swagat hai.");
 
-setTimeout(askQuestion,2500);
+setTimeout(askQuestion,2000);
 
 }
 
+// ASK QUESTIONS
 function askQuestion(){
 
 if(!calling) return;
 
 let q=questions[step];
-
-updateStatus("AI: "+q);
 
 speak(q);
 
@@ -89,6 +99,7 @@ setTimeout(startListening,2500);
 
 }
 
+// LISTEN USER
 function startListening(){
 
 if(!calling) return;
@@ -98,8 +109,6 @@ try{
 recognition=new(window.SpeechRecognition || window.webkitSpeechRecognition)();
 
 recognition.lang="hi-IN";
-recognition.interimResults=false;
-
 recognition.start();
 
 updateStatus("Listening...");
@@ -115,7 +124,7 @@ handleAnswer(text);
 };
 
 recognition.onerror=()=>{
-updateStatus("Mic issue... retrying");
+updateStatus("Mic error... retry");
 setTimeout(startListening,1500);
 };
 
@@ -125,28 +134,23 @@ alert("Chrome browser use karo");
 
 }
 
+// HANDLE ANSWER
 function handleAnswer(text){
 
 if(text.includes("haan") || text.includes("yes")){
-
 handleYes();
-
 }
 else if(text.includes("na") || text.includes("no")){
-
 handleNo();
-
 }
 else{
-
-speak("Kripya haan ya na bole");
-
+speak("Sirf haan ya na bole");
 setTimeout(startListening,1500);
-
 }
 
 }
 
+// YES FLOW
 function handleYes(){
 
 if(step===0){
@@ -172,6 +176,7 @@ setTimeout(askQuestion,3000);
 
 }
 
+// NO FLOW
 function handleNo(){
 
 step++;
@@ -185,17 +190,12 @@ endCall();
 
 }
 
+// SPEAK FUNCTION
 function speak(text){
 
 let msg=new SpeechSynthesisUtterance(text);
 
 msg.lang="hi-IN";
-
-// better voice load fix
-let voices=speechSynthesis.getVoices();
-if(voices.length>0){
-msg.voice=voices.find(v=>v.lang==="hi-IN") || voices[0];
-}
 
 speechSynthesis.speak(msg);
 
@@ -203,6 +203,7 @@ updateStatus("AI: "+text);
 
 }
 
+// CALL OWNER
 function connectOwner(){
 
 speak("Main aapko owner se connect kar raha hoon");
@@ -213,6 +214,7 @@ window.location.href="tel:+919288678795";
 
 }
 
+// END CALL
 function endCall(){
 
 calling=false;
@@ -223,6 +225,7 @@ updateStatus("Call Ended");
 
 }
 
+// STATUS
 function updateStatus(t){
 document.getElementById("status").innerText=t;
 }
