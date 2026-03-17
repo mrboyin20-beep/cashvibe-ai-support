@@ -1,98 +1,230 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>CashVibe AI Assistant</title>
+<title>CashVibe AI Call</title>
 
 <style>
 body{
-font-family:Arial;
+margin:0;
 background:#0f172a;
+font-family:sans-serif;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
 color:white;
+}
+
+.box{
+width:320px;
+background:#111827;
+padding:30px;
+border-radius:20px;
 text-align:center;
-margin-top:100px;
+box-shadow:0 0 40px rgba(0,0,0,0.7);
 }
 
 button{
-padding:15px 25px;
-font-size:18px;
-border-radius:12px;
+margin-top:15px;
+padding:12px 20px;
 border:none;
+border-radius:12px;
 background:#22c55e;
+color:white;
 cursor:pointer;
 }
 
-#box{
-margin-top:30px;
-font-size:18px;
-}
-</style>
+.end{background:red;}
 
+</style>
 </head>
 
 <body>
 
-<h1>CashVibe AI Support 🤖</h1>
-<p>Mic dabao aur AI se baat karo</p>
+<div class="box">
 
-<button onclick="start()">🎤 Talk</button>
+<h2>📞 CashVibe AI Call</h2>
+<p id="status">Ready</p>
 
-<div id="box">
-<p id="user"></p>
-<p id="ai"></p>
+<button onclick="startCall()">Start Call</button>
+<button class="end" onclick="endCall()">End</button>
+
 </div>
 
 <script>
 
-const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-recognition.lang="en-IN";
+let recognition;
+let calling=false;
+let step=0;
 
-function start(){
+const questions=[
+"Kya aap CashVibe ke baare me jaana chahte hain?",
+"Kya aap earning process samajhna chahte hain?",
+"Kya aap withdrawal ke baare me jaana chahte hain?",
+"Kya aap owner se baat karna chahte hain?"
+];
+
+function startCall(){
+
+calling=true;
+step=0;
+
+speak("Hello! CashVibe support me aapka swagat hai.");
+
+setTimeout(askQuestion,2500);
+
+}
+
+function askQuestion(){
+
+if(!calling) return;
+
+let q=questions[step];
+
+updateStatus("AI: "+q);
+
+speak(q);
+
+setTimeout(startListening,2500);
+
+}
+
+function startListening(){
+
+if(!calling) return;
+
+try{
+
+recognition=new(window.SpeechRecognition || window.webkitSpeechRecognition)();
+
+recognition.lang="hi-IN";
+recognition.interimResults=false;
+
 recognition.start();
+
+updateStatus("Listening...");
+
+recognition.onresult=(e)=>{
+
+let text=e.results[0][0].transcript.toLowerCase();
+
+updateStatus("You: "+text);
+
+handleAnswer(text);
+
+};
+
+recognition.onerror=()=>{
+updateStatus("Mic issue... retrying");
+setTimeout(startListening,1500);
+};
+
+}catch(e){
+alert("Chrome browser use karo");
 }
 
-recognition.onresult = async function(event){
+}
 
-let text = event.results[0][0].transcript;
+function handleAnswer(text){
 
-document.getElementById("user").innerHTML="You: "+text;
+if(text.includes("haan") || text.includes("yes")){
 
-let reply = await askAI(text);
+handleYes();
 
-document.getElementById("ai").innerHTML="AI: "+reply;
+}
+else if(text.includes("na") || text.includes("no")){
 
-let speech = new SpeechSynthesisUtterance(reply);
-speech.lang="en-IN";
+handleNo();
 
-speechSynthesis.speak(speech);
+}
+else{
+
+speak("Kripya haan ya na bole");
+
+setTimeout(startListening,1500);
 
 }
 
-async function askAI(question){
-
-let response = await fetch(
-"https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium",
-{
-method:"POST",
-
-headers:{
-"Content-Type":"application/json",
-"Authorization":"Bearer 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"
-},
-
-body:JSON.stringify({
-inputs:question
-})
-}
-);
-
-let data = await response.json();
-
-if(data.generated_text){
-return data.generated_text;
 }
 
-return "CashVibe ek earning platform hai jahan tasks, spin aur referral se coins earn kiye ja sakte hain.";
+function handleYes(){
 
+if(step===0){
+speak("CashVibe ek earning platform hai jahan aap tasks aur referral se paisa kama sakte hain.");
+}
+
+if(step===1){
+speak("Aap daily tasks aur ads dekh kar earning kar sakte hain.");
+}
+
+if(step===2){
+speak("Minimum coins hone par aap withdrawal kar sakte hain.");
+}
+
+if(step===3){
+connectOwner();
+return;
+}
+
+step++;
+
+setTimeout(askQuestion,3000);
+
+}
+
+function handleNo(){
+
+step++;
+
+if(step<questions.length){
+askQuestion();
+}else{
+speak("Dhanyavaad, aapka din shubh ho");
+endCall();
+}
+
+}
+
+function speak(text){
+
+let msg=new SpeechSynthesisUtterance(text);
+
+msg.lang="hi-IN";
+
+// better voice load fix
+let voices=speechSynthesis.getVoices();
+if(voices.length>0){
+msg.voice=voices.find(v=>v.lang==="hi-IN") || voices[0];
+}
+
+speechSynthesis.speak(msg);
+
+updateStatus("AI: "+text);
+
+}
+
+function connectOwner(){
+
+speak("Main aapko owner se connect kar raha hoon");
+
+setTimeout(()=>{
+window.location.href="tel:+919288678795";
+},2500);
+
+}
+
+function endCall(){
+
+calling=false;
+
+if(recognition) recognition.stop();
+
+updateStatus("Call Ended");
+
+}
+
+function updateStatus(t){
+document.getElementById("status").innerText=t;
 }
 
 </script>
